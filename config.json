@@ -13,7 +13,7 @@
         "month": "1",
         "year": "2020"
     },
-    "downloadEmitidos": false,
+    "downloadEmitidos": true,
     "downloadRecibidos": true,
     "URL": "https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT"
 }

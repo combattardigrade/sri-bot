@@ -65,13 +65,13 @@ const sleep = (milliseconds) => {
 }
 
 
-const login = async (driver, userConfig) => {
+const downloadReports = async (driver, userConfig) => {
     // Go to URL
     await driver.get(userConfig.URL)
-
+    // await sleep(5000)
     // Wait for page to load
     await driver.wait(until.titleContains('SRI'), 15000)
-
+    
     // Click Login Btn
     await driver.wait(until.elementLocated(By.xpath('//*[@id="sribody"]/sri-root/div/div[1]/sri-topbar/div/ul/li[2]/a')), 15000)
     await driver.findElement(By.xpath('//*[@id="sribody"]/sri-root/div/div[1]/sri-topbar/div/ul/li[2]/a')).click()
@@ -127,7 +127,7 @@ const login = async (driver, userConfig) => {
 
 
     // Loop period
-    while ((parseInt(userConfig.startDate.day) != parseInt(userConfig.endDate.day)) || (parseInt(userConfig.startDate.month) != parseInt(userConfig.endDate.month)) || (parseInt(userConfig.startDate.year) != parseInt(userConfig.endDate.year))) {
+    while ((parseInt(userConfig.startDate.day) != parseInt(userConfig.endDate.day)) || (parseInt(userConfig.startDate.month) != parseInt(userConfig.endDate.month))  || (parseInt(userConfig.startDate.year) != parseInt(userConfig.endDate.year) )) {
 
         if (userConfig.downloadEmitidos == true) {
             // Get recibos emitidos
@@ -160,7 +160,20 @@ const login = async (driver, userConfig) => {
             await driver.executeScript(`rcBuscar();`)
             await sleep(500)
 
-            // Download files
+            // Download files        
+            try {
+                // check if file exists
+                await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:0:lnkXml"]'))
+                for (let i = 0; i < 100; i++) {
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 2000)
+                    await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')).click()
+                    await sleep(500)
+                }
+            }
+            catch (e) {
+                console.log(e)
+                console.log('No files found...')
+            }
         }
 
         if (userConfig.downloadRecibidos == true) {
@@ -199,10 +212,12 @@ const login = async (driver, userConfig) => {
             try {
                 // check if file exists
                 await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:0:lnkXml"]'))
-                for (let i = 0; i < 10; i++) {
-                    await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 5000)
+                
+                for (let i = 0; i < 100; i++) {                    
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 2000)
                     await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')).click()
                     await sleep(500)
+                    console.log(`Downloading file no.${i}`)
                 }
             }
             catch (e) {
@@ -214,7 +229,7 @@ const login = async (driver, userConfig) => {
 
         // Update startDate
         userConfig.startDate.day = parseInt(userConfig.startDate.day) + 1
-        if (parseInt(userConfig.startDate.day) > 31 || (parseInt(userConfig.startDate.day) > 28 && parseInt(userConfig.startDate.month) == 2) ) {
+        if (parseInt(userConfig.startDate.day) > 31 || (parseInt(userConfig.startDate.day) > 28 && parseInt(userConfig.startDate.month) == 2)) {
             userConfig.startDate.day = 1
             userConfig.startDate.month = parseInt(userConfig.startDate.month) + 1
             if (userConfig.startDate.month > 12) {
@@ -227,15 +242,21 @@ const login = async (driver, userConfig) => {
         await sleep(1500)
     }
 
+    
+
     console.log('Done...')
     await sleep(20000)
 }
+
 
 start = async () => {
     // browser options
     const options = new chrome.Options()
     // options.addArguments("--incognito")
+    // Needed for headless
+    options.addArguments("--window-size=1920,1080")
     options.addArguments("--start-maximized")
+    // options.addArguments("--headless")
     // use personal profile
     // options.addArguments("--user-data-dir=C:/Users/tardigrade/AppData/Local/Google/Chrome/User Data/");
     //options.addArguments("--profile-directory=Default")
@@ -265,8 +286,8 @@ start = async () => {
     // start driver
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build()
 
-    // login process
-    await login(driver, userConfig)
+    // download reports process
+    await downloadReports(driver, userConfig)
 
 }
 
