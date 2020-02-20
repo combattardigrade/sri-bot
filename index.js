@@ -11,9 +11,6 @@ var convert = require('xml-js')
 const crypto = require('crypto')
 const fse = require('fs-extra')
 
-
-const URL = 'https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT'
-
 const config = {
     sitekey: '6Lc6rokUAAAAAJBG2M1ZM1LIgJ85DwbSNNjYoLDk',
     pageurl: 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/menu.jsf',
@@ -21,7 +18,6 @@ const config = {
     apiSubmitUrl: 'http://2captcha.com/in.php',
     apiRetrieveUrl: 'http://2captcha.com/res.php'
 }
-
 
 const initiateCaptchaRequest = async (apiKey) => {
     const formData = {
@@ -324,8 +320,15 @@ start = async () => {
     // start driver
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build()
 
-    // download reports process
-    await downloadReports(driver, userConfig)
+    // Tipo de descarga (mensual o diaria)
+    if(userConfig.tipoDescarga == 'diaria') {
+        // download reports daily process
+        await downloadReports(driver, userConfig)
+    }
+    else if (userConfig.tipoDescarga == 'mensual') {
+        // download reports monthly process
+        await downloadMonthly(driver, userConfig)
+    }
 
 }
 

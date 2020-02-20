@@ -15,6 +15,7 @@
     },
     "downloadEmitidos": true,
     "downloadRecibidos": true,
+    "tipoDescarga": "mensual", 
     "emptyDownloadsFolderOnStart": true,
     "emptyOutputFolderOnStart": false,
     "URL": "https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT"    
