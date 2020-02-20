@@ -214,7 +214,7 @@ const login = async (driver, userConfig) => {
 
         // Update startDate
         userConfig.startDate.day = parseInt(userConfig.startDate.day) + 1
-        if (parseInt(userConfig.startDate.day) > 31 || (parseInt(userConfig.startDate.day > 28 && parseInt(userConfig.startDate.month) == 2))) {
+        if (parseInt(userConfig.startDate.day) > 31 || (parseInt(userConfig.startDate.day) > 28 && parseInt(userConfig.startDate.month) == 2) ) {
             userConfig.startDate.day = 1
             userConfig.startDate.month = parseInt(userConfig.startDate.month) + 1
             if (userConfig.startDate.month > 12) {
