@@ -1,12 +1,15 @@
 // Selenium Webdriver
 const chrome = require('selenium-webdriver/chrome')
 const { Builder, By, Key, until } = require('selenium-webdriver')
-
-
 const request = require('request-promise-native')
 const poll = require('promise-poller').default
 const fs = require('fs')
 const path = require('path')
+const flatten = require('flat')
+const ObjectsToCsv = require('objects-to-csv')
+var convert = require('xml-js')
+const crypto = require('crypto')
+const fse = require('fs-extra')
 
 
 const URL = 'https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT'
@@ -135,6 +138,10 @@ const downloadReports = async (driver, userConfig) => {
             // Initiate captcha request
             console.log('Starting recaptcha solution request...')
             let requestId = await initiateCaptchaRequest(config.apiKey)
+   
+            // Select receipt type = Emitidos
+            await driver.findElement(By.xpath('//*[@id="frmPrincipal:cmbProcesos"]/option[1]')).click()
+            await sleep(2000)
 
             // Prepare date string
             let day = (userConfig.startDate.day.toString()).length == 1 ? '0' + userConfig.startDate.day.toString() : userConfig.startDate.day.toString()
@@ -144,10 +151,6 @@ const downloadReports = async (driver, userConfig) => {
             await driver.findElement(By.xpath('//*[@id="frmPrincipal:calendarFechaDesde_input"]')).clear()
             // Write date
             await driver.findElement(By.xpath('//*[@id="frmPrincipal:calendarFechaDesde_input"]')).sendKeys(date)
-
-            // Select receipt type = Emitidos
-            await driver.findElement(By.xpath('//*[@id="frmPrincipal:cmbProcesos"]/option[1]')).click()
-            await sleep(2000)
 
             // Wait for Recaptcha solution
             console.log('Waiting for recaptcha solution...')
@@ -183,6 +186,10 @@ const downloadReports = async (driver, userConfig) => {
             console.log('Starting recaptcha solution request...')
             requestId = await initiateCaptchaRequest(config.apiKey)
 
+            // Select receipt type = Emitidos
+            await driver.findElement(By.xpath('//*[@id="frmPrincipal:cmbProcesos"]/option[2]')).click()
+            await sleep(2000)
+
             // Prepare date string
             let day = (userConfig.startDate.day.toString()).length == 1 ? '0' + userConfig.startDate.day.toString() : userConfig.startDate.day.toString()
             let month = (userConfig.startDate.month.toString()).length == 1 ? '0' + userConfig.startDate.month.toString() : userConfig.startDate.month.toString()
@@ -191,10 +198,6 @@ const downloadReports = async (driver, userConfig) => {
             await driver.findElement(By.xpath('//*[@id="frmPrincipal:calendarFechaDesde_input"]')).clear()
             // Write date
             await driver.findElement(By.xpath('//*[@id="frmPrincipal:calendarFechaDesde_input"]')).sendKeys(date)
-
-            // Select receipt type = Emitidos
-            await driver.findElement(By.xpath('//*[@id="frmPrincipal:cmbProcesos"]/option[2]')).click()
-            await sleep(2000)
 
             // Wait for Recaptcha solution
             console.log('Waiting for recaptcha solution...')
@@ -242,10 +245,35 @@ const downloadReports = async (driver, userConfig) => {
         await sleep(1500)
     }
 
-    
+    convertFiles()
 
-    console.log('Done...')
-    await sleep(20000)
+    console.log('Process completed...')
+    await sleep(5000)
+    console.log('Terminating program...')
+    driver.quit()
+}
+
+
+const convertFiles = async () => {
+    console.log('Converting files xml files to csv...')
+    const facturas = []
+    // Read files
+    let files = fs.readdirSync(path.resolve('downloads'))
+
+    for (let file of files) {
+        // Read xml file
+        const xmlData = fs.readFileSync(path.join('downloads', file), 'utf-8')
+        // Convert xml file to js object
+        const result = convert.xml2js(xmlData, { compact: true, spaces: 4 })
+        const factura = convert.xml2js(result.autorizacion.comprobante._cdata, { compact: true, spaces: 4 })
+        facturas.push(flatten(factura))
+    }
+
+    // create new csv with `facturas`
+    const csv = new ObjectsToCsv(facturas)
+    // write csv to disk
+    csv.toDisk(path.join('output', crypto.randomBytes(16).toString('hex') + '.csv'))
+    console.log('CSV file created...')
 }
 
 
@@ -282,6 +310,16 @@ start = async () => {
 
     // Read Json file
     const userConfig = JSON.parse(fs.readFileSync('config.json', 'utf8'))
+
+    // Empty Downloads folder if set in config
+    if(userConfig.emptyDownloadsFolderOnStart == true) {
+        fse.emptyDirSync(path.resolve('downloads'))
+    }
+
+    // Empty Output folder if set in config
+    if(userConfig.emptyOutputFolderOnStart == true) {
+        fse.emptyDirSync(path.resolve('output'))
+    } 
 
     // start driver
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build()
