@@ -10,6 +10,7 @@ const ObjectsToCsv = require('objects-to-csv')
 var convert = require('xml-js')
 const crypto = require('crypto')
 const fse = require('fs-extra')
+const moment = require('moment')
 
 const config = {
     sitekey: '6Lc6rokUAAAAAJBG2M1ZM1LIgJ85DwbSNNjYoLDk',
@@ -70,7 +71,7 @@ const downloadReports = async (driver, userConfig) => {
     // await sleep(5000)
     // Wait for page to load
     await driver.wait(until.titleContains('SRI'), 15000)
-    
+
     // Click Login Btn
     await driver.wait(until.elementLocated(By.xpath('//*[@id="sribody"]/sri-root/div/div[1]/sri-topbar/div/ul/li[2]/a')), 15000)
     await driver.findElement(By.xpath('//*[@id="sribody"]/sri-root/div/div[1]/sri-topbar/div/ul/li[2]/a')).click()
@@ -126,7 +127,7 @@ const downloadReports = async (driver, userConfig) => {
 
 
     // Loop period
-    while ((parseInt(userConfig.startDate.day) != parseInt(userConfig.endDate.day)) || (parseInt(userConfig.startDate.month) != parseInt(userConfig.endDate.month))  || (parseInt(userConfig.startDate.year) != parseInt(userConfig.endDate.year) )) {
+    while ((parseInt(userConfig.startDate.day) != parseInt(userConfig.endDate.day)) || (parseInt(userConfig.startDate.month) != parseInt(userConfig.endDate.month)) || (parseInt(userConfig.startDate.year) != parseInt(userConfig.endDate.year))) {
 
         if (userConfig.downloadEmitidos == true) {
             // Get recibos emitidos
@@ -134,7 +135,7 @@ const downloadReports = async (driver, userConfig) => {
             // Initiate captcha request
             console.log('Starting recaptcha solution request...')
             let requestId = await initiateCaptchaRequest(config.apiKey)
-   
+
             // Select receipt type = Emitidos
             await driver.findElement(By.xpath('//*[@id="frmPrincipal:cmbProcesos"]/option[1]')).click()
             await sleep(2000)
@@ -211,8 +212,8 @@ const downloadReports = async (driver, userConfig) => {
             try {
                 // check if file exists
                 await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:0:lnkXml"]'))
-                
-                for (let i = 0; i < 100; i++) {                    
+
+                for (let i = 0; i < 100; i++) {
                     await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 2000)
                     await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')).click()
                     await sleep(500)
@@ -250,6 +251,119 @@ const downloadReports = async (driver, userConfig) => {
 }
 
 
+const downloadMonthly = async (driver, userConfig) => {
+    // Go to URL
+    await driver.get(userConfig.URL)
+    // Wait for page to load
+    await driver.wait(until.titleContains('SRI'), 15000)
+
+    // Click Login Btn
+    await driver.wait(until.elementLocated(By.xpath('//*[@id="sribody"]/sri-root/div/div[1]/sri-topbar/div/ul/li[2]/a')), 15000)
+    await driver.findElement(By.xpath('//*[@id="sribody"]/sri-root/div/div[1]/sri-topbar/div/ul/li[2]/a')).click()
+    console.log('Go to login page btn clicked...')
+    await sleep(2000)
+
+    // Wait for page to load
+    await driver.wait(until.titleContains('Login'), 15000)
+    // Wait for login form
+    await driver.wait(until.elementLocated(By.xpath('//*[@id="usuario"]')), 15000)
+    // Write credentials
+    await driver.findElement(By.xpath('//*[@id="usuario"]')).sendKeys(userConfig.user.username)
+    await driver.findElement(By.xpath('//*[@id="password"]')).sendKeys(userConfig.user.password)
+    // Click login btn
+    await driver.findElement(By.xpath('//*[@id="kc-login"]')).click()
+    console.log('Log in btn clicked')
+
+    await sleep(5000)
+    await driver.wait(until.titleContains('SRI en Línea'), 15000)
+
+    // Go to reports page
+    // Click sidebar btn
+    await driver.wait(until.elementLocated(By.xpath('//*[@id="sri-menu"]')), 15000)
+    await driver.findElement(By.xpath('//*[@id="sri-menu"]')).click()
+    await sleep(500)
+
+    // Click facturacion en linea btn
+    await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[1]/a')), 15000)
+    await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[1]/a')).click()
+    await sleep(500)
+
+    // Click Comprobantes Electronicos Recibidos
+    await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[2]/a')), 15000)
+    await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[2]/a')).click()
+    await sleep(500)
+
+    // Wait for Report page to load    
+    await driver.wait(until.titleContains('SISTEMA DE COMPROBANTES'), 15000)
+    await driver.wait(until.elementLocated(By.xpath('//*[@id="tituloPagina"]/div/span[1]')), 15000)
+    await sleep(3000)
+
+    // Loop period
+    while ((parseInt(userConfig.startDate.month) != parseInt(userConfig.endDate.month)) || (parseInt(userConfig.startDate.year) != parseInt(userConfig.endDate.year) ) ) {
+        // Initiate captcha request
+        console.log('Starting recaptcha solution request...')
+        const requestId = await initiateCaptchaRequest(config.apiKey)
+
+        // Select all days => option 1
+        await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:dia"]/option[1]')), 15000)
+        await driver.findElement(By.xpath('//*[@id="frmPrincipal:dia"]/option[1]')).click()
+
+        // Select month
+        await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:mes"]/option[' + parseInt(userConfig.startDate.month) + ']')), 15000)
+        await driver.findElement(By.xpath('//*[@id="frmPrincipal:mes"]/option[' + parseInt(userConfig.startDate.month) + ']')).click()
+
+        // Select year       
+        let yearSelector = parseInt(userConfig.startDate.year) == moment().format('Y') ? 1 : moment().format('Y') - parseInt(userConfig.startDate.year) + 1
+        await driver.findElement(By.xpath('//*[@id="frmPrincipal:ano"]/option[' + parseInt(yearSelector) + ']')).click()
+
+        // Wait for Recaptcha solution
+        console.log('Waiting for recaptcha solution...')
+        const response = await pollForRequestResults(config.apiKey, requestId)
+        console.log(response)
+
+        // Inject recaptcha
+        console.log('Injecting recaptcha solution...')
+        await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="${response}";`)
+        await driver.executeScript(`rcBuscar();`)
+        await sleep(5000)
+
+        // Download files        
+        try {
+            // check if file exists
+            await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:0:lnkXml"]'))
+
+            for (let i = 0; i < 100; i++) {
+                await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 2000)
+                await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')).click()
+                await sleep(500)
+                console.log(`Downloading file no.${i}`)
+            }
+        }
+        catch (e) {
+            console.log(e)
+            console.log('No files found...')
+        }
+
+        // Update startDate
+        userConfig.startDate.month = parseInt(userConfig.startDate.month) + 1
+        if (parseInt(userConfig.startDate.month) > 12) {
+            userConfig.startDate.month = 1
+            userConfig.startDate.year = parseInt(userConfig.startDate.year) + 1
+        }
+
+        // Wait before next month
+        await sleep(1500)
+    }
+
+    // Convert files
+    convertFiles()
+
+    console.log('Process completed...')
+    await sleep(5000)
+    console.log('Terminating program...')
+    driver.quit()
+}
+
 const convertFiles = async () => {
     console.log('Converting files xml files to csv...')
     const facturas = []
@@ -257,6 +371,8 @@ const convertFiles = async () => {
     let files = fs.readdirSync(path.resolve('downloads'))
 
     for (let file of files) {
+        // Check if file is `factura`
+        if(!file.includes('Factura')) continue;
         // Read xml file
         const xmlData = fs.readFileSync(path.join('downloads', file), 'utf-8')
         // Convert xml file to js object
@@ -308,25 +424,27 @@ start = async () => {
     const userConfig = JSON.parse(fs.readFileSync('config.json', 'utf8'))
 
     // Empty Downloads folder if set in config
-    if(userConfig.emptyDownloadsFolderOnStart == true) {
+    if (userConfig.emptyDownloadsFolderOnStart == true) {
         fse.emptyDirSync(path.resolve('downloads'))
     }
 
     // Empty Output folder if set in config
-    if(userConfig.emptyOutputFolderOnStart == true) {
+    if (userConfig.emptyOutputFolderOnStart == true) {
         fse.emptyDirSync(path.resolve('output'))
-    } 
+    }
 
     // start driver
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build()
 
     // Tipo de descarga (mensual o diaria)
-    if(userConfig.tipoDescarga == 'diaria') {
+    if (userConfig.tipoDescarga == 'diaria') {
         // download reports daily process
+        console.log('Starting daily download...')
         await downloadReports(driver, userConfig)
     }
     else if (userConfig.tipoDescarga == 'mensual') {
         // download reports monthly process
+        console.log('Starting monthly download...')
         await downloadMonthly(driver, userConfig)
     }
 

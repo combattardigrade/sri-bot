@@ -7,11 +7,14 @@ var convert = require('xml-js')
 const crypto = require('crypto')
 
 const convertFiles = async () => {
+    console.log('Converting files xml files to csv...')
     const facturas = []
     // Read files
     let files = fs.readdirSync(path.resolve('downloads'))
 
     for (let file of files) {
+        // Check if file is `factura`
+        if(!file.includes('Factura')) continue;
         // Read xml file
         const xmlData = fs.readFileSync(path.join('downloads', file), 'utf-8')
         // Convert xml file to js object
@@ -24,6 +27,7 @@ const convertFiles = async () => {
     const csv = new ObjectsToCsv(facturas)
     // write csv to disk
     csv.toDisk(path.join('output', crypto.randomBytes(16).toString('hex') + '.csv'))
+    console.log('CSV file created...')
 }
 
 convertFiles()
