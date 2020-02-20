@@ -4,18 +4,18 @@
         "password": "JUAN1722"
     },
     "startDate": {
-        "day": "11",
-        "month": "11",
-        "year": "2019"
+        "day": "13",
+        "month": "1",
+        "year": "2020"
     },
     "endDate": {
         "day": "14",
-        "month": "2",
+        "month": "1",
         "year": "2020"
     },
     "downloadEmitidos": true,
     "downloadRecibidos": true,
-    "tipoDescarga": "mensual", 
+    "tipoDescarga": "diaria", 
     "emptyDownloadsFolderOnStart": true,
     "emptyOutputFolderOnStart": true,
     "URL": "https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT"    
