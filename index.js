@@ -3,10 +3,10 @@ const chrome = require('selenium-webdriver/chrome')
 const { Builder, By, Key, until } = require('selenium-webdriver')
 const request = require('request-promise-native')
 const poll = require('promise-poller').default
+const fs = require('fs')
+const moment = require('moment')
 
 const URL = 'https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT'
-const USER = '1722357629001'
-const PASSWORD = 'JUAN1722'
 
 const config = {
     sitekey: '6Lc6rokUAAAAAJBG2M1ZM1LIgJ85DwbSNNjYoLDk',
@@ -61,9 +61,10 @@ const sleep = (milliseconds) => {
     return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
-const login = async (driver) => {
+
+const login = async (driver, userConfig) => {
     // Go to URL
-    await driver.get(URL)
+    await driver.get(userConfig.URL)
 
     // Wait for page to load
     await driver.wait(until.titleContains('SRI'), 15000)
@@ -79,8 +80,8 @@ const login = async (driver) => {
     // Wait for login form
     await driver.wait(until.elementLocated(By.xpath('//*[@id="usuario"]')), 15000)
     // Write credentials
-    await driver.findElement(By.xpath('//*[@id="usuario"]')).sendKeys(USER)
-    await driver.findElement(By.xpath('//*[@id="password"]')).sendKeys(PASSWORD)
+    await driver.findElement(By.xpath('//*[@id="usuario"]')).sendKeys(userConfig.user.username)
+    await driver.findElement(By.xpath('//*[@id="password"]')).sendKeys(userConfig.user.password)
     // Click login btn
     await driver.findElement(By.xpath('//*[@id="kc-login"]')).click()
     console.log('Log in btn clicked')
@@ -88,6 +89,7 @@ const login = async (driver) => {
     await sleep(5000)
     await driver.wait(until.titleContains('SRI en Línea'), 15000)
 
+    // Go to reports page
     // Click sidebar btn
     await driver.wait(until.elementLocated(By.xpath('//*[@id="sri-menu"]')), 15000)
     await driver.findElement(By.xpath('//*[@id="sri-menu"]')).click()
@@ -96,38 +98,60 @@ const login = async (driver) => {
     await sleep(500)
     await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[2]/a')).click()
 
-    // Go to reports page
-    //await driver.get('https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/recibidos/comprobantesRecibidos.jsf?&contextoMPT=https://srienlinea.sri.gob.ec/tuportal-internet&pathMPT=Facturaci%F3n%20Electr%F3nica&actualMPT=Comprobantes%20electr%F3nicos%20recibidos%20&linkMPT=%2Fcomprobantes-electronicos-internet%2Fpages%2Fconsultas%2Frecibidos%2FcomprobantesRecibidos.jsf%3F&esFavorito=S')
-    // Wait for page to load
+    // Wait for Report page to load    
     await driver.wait(until.titleContains('SISTEMA DE COMPROBANTES'), 15000)
-    
     await sleep(3000)
 
-    // Select day
-    await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:dia"]/option[2]')), 15000)
-    await driver.findElement(By.xpath('//*[@id="frmPrincipal:dia"]/option[2]')).click()
 
-    // Initiate captcha request
-    console.log('Starting recaptcha solution request...')
-    const requestId = await initiateCaptchaRequest(config.apiKey)
-   
-    // Captcha
-    console.log('Waiting for recaptcha solution...')
-    const response = await pollForRequestResults(config.apiKey, requestId)
-    console.log(response)
-    
-    // Inject recaptcha
-    console.log('Injecting recaptcha solution...')
-    await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="${response}";`)
-    await driver.executeScript(`rcBuscar();`)
-    await sleep(500)
 
-    // Click consultar btn
-    // console.log('Clicking `consultar` btn')
-    // await driver.findElement(By.xpath('//*[@id="btnRecaptcha"]')).click()
+    // Loop period
+    while ((userConfig.startDate.month != userConfig.endDate.month) && (userConfig.startDate.year != userConfig.endDate.year)) {
 
-    
+        // Initiate captcha request
+        console.log('Starting recaptcha solution request...')
+        const requestId = await initiateCaptchaRequest(config.apiKey)
 
+        // Select all days => option 1
+        await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:dia"]/option[1]')), 15000)
+        await driver.findElement(By.xpath('//*[@id="frmPrincipal:dia"]/option[1]')).click()
+
+        // Select month
+        await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:mes"]/option[' + parseInt(userConfig.startDate.month) + ']')), 15000)
+        await driver.findElement(By.xpath('//*[@id="frmPrincipal:mes"]/option[' + parseInt(userConfig.startDate.month) + ']')).click()
+
+        // Select year       
+        let yearSelector = parseInt(userConfig.startDate.year) == moment().format('Y') ? 1 : moment().format('Y') - parseInt(userConfig.startDate.year) + 1        
+        await driver.findElement(By.xpath('//*[@id="frmPrincipal:ano"]/option[' + parseInt(yearSelector) + ']')).click()
+
+        // Wait for Recaptcha solution
+        console.log('Waiting for recaptcha solution...')
+        const response = await pollForRequestResults(config.apiKey, requestId)
+        console.log(response)
+
+        // Inject recaptcha
+        console.log('Injecting recaptcha solution...')
+        await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="${response}";`)
+        await driver.executeScript(`rcBuscar();`)
+        await sleep(500)
+
+        // Download files
+        
+
+
+
+        // Update startDate
+        userConfig.startDate.month = parseInt(userConfig.startDate.month) + 1
+        if (userConfig.startDate.month > 12) {
+            userConfig.startDate.month = 1
+            userConfig.startDate.year = parseInt(userConfig.startDate.year) + 1
+        }
+
+        // Wait before next month
+        await sleep(1500)
+
+    }
+
+    console.log('Done...')
     await sleep(20000)
 }
 
@@ -140,11 +164,14 @@ start = async () => {
     // options.addArguments("--user-data-dir=C:/Users/tardigrade/AppData/Local/Google/Chrome/User Data/");
     //options.addArguments("--profile-directory=Default")
 
+    // Read Json file
+    const userConfig = JSON.parse(fs.readFileSync('config.json', 'utf8'))
+
     // start driver
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build()
 
     // login process
-    await login(driver)
+    await login(driver, userConfig)
 
 }
 
