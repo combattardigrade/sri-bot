@@ -1,6 +1,8 @@
 // Selenium Webdriver
 const chrome = require('selenium-webdriver/chrome')
 const { Builder, By, Key, until } = require('selenium-webdriver')
+var webdriver = require('selenium-webdriver');
+
 const request = require('request-promise-native')
 const poll = require('promise-poller').default
 const fs = require('fs')
@@ -34,7 +36,7 @@ const initiateCaptchaRequest = async (apiKey) => {
     return JSON.parse(response).request
 }
 
-const pollForRequestResults = async (key, id, retries = 30, interval = 1500, delay = 5000) => {
+const pollForRequestResults = async (key, id, retries = 30, interval = 1500, delay = 500) => {
     console.log(`Waiting for ${delay} miliseconds...`)
     await sleep(delay)
     return poll({
@@ -66,6 +68,9 @@ const sleep = (milliseconds) => {
 
 
 const downloadReports = async (driver, userConfig) => {
+    // Initiate captcha request
+    console.log('Starting recaptcha solution request...')
+    let requestId = await initiateCaptchaRequest(config.apiKey)
     // Go to URL
     await driver.get(userConfig.URL)
     // await sleep(5000)
@@ -172,9 +177,6 @@ const downloadReports = async (driver, userConfig) => {
         if (userConfig.downloadEmitidos == true) {
             // Get recibos emitidos
             console.log('Getting `recibos emitidos...`')
-            // Initiate captcha request
-            console.log('Starting recaptcha solution request...')
-            let requestId = await initiateCaptchaRequest(config.apiKey)
 
             // Select receipt type = Emitidos
             await driver.findElement(By.xpath('//*[@id="frmPrincipal:cmbProcesos"]/option[1]')).click()
@@ -200,6 +202,14 @@ const downloadReports = async (driver, userConfig) => {
             await driver.executeScript(`rcBuscar();`)
             await sleep(500)
 
+            // check if last loop
+            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year)))) {
+                // Initiate captcha request
+                console.log('Starting recaptcha solution request...')
+                requestId = await initiateCaptchaRequest(config.apiKey)
+            }
+            await sleep(4000)  
+
             // Download files        
             try {
                 // check if file exists
@@ -219,9 +229,6 @@ const downloadReports = async (driver, userConfig) => {
         if (userConfig.downloadRecibidos == true) {
             // Get recibos recibidos
             console.log('Getting `recibos recibidos...`')
-            // Initiate captcha request
-            console.log('Starting recaptcha solution request...')
-            requestId = await initiateCaptchaRequest(config.apiKey)
 
             // Select receipt type = Emitidos
             await driver.findElement(By.xpath('//*[@id="frmPrincipal:cmbProcesos"]/option[2]')).click()
@@ -245,19 +252,30 @@ const downloadReports = async (driver, userConfig) => {
             console.log('Injecting recaptcha solution...')
             await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="${response}";`)
             await driver.executeScript(`rcBuscar();`)
-            await sleep(5000)
-
+            // check if last loop
+            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year)))) {
+                // Initiate captcha request
+                console.log('Starting recaptcha solution request...')
+                requestId = await initiateCaptchaRequest(config.apiKey)
+            }
+            await sleep(4000)            
 
             // Download files        
             try {
                 // check if file exists
                 await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:0:lnkXml"]'))
 
-                for (let i = 0; i < 100; i++) {
-                    await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 2000)
-                    await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')).click()
-                    await sleep(500)
-                    console.log(`Downloading file no.${i}`)
+                for (let i = 0; i < 50; i++) {
+                    try {
+                        // driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 2000)
+                        driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')).click()
+                        //await sleep(500)
+                        console.log(`Downloading file no.${i}`)
+                    }
+                    catch (e) {
+                        console.log('File no.' + i + 'does not exists or failed')
+                        break;
+                    }
                 }
             }
             catch (e) {
@@ -282,16 +300,21 @@ const downloadReports = async (driver, userConfig) => {
         await sleep(1500)
     }
 
-    convertFiles()
-
     console.log('Process completed...')
-    await sleep(5000)
+    await sleep(2000)
     console.log('Terminating program...')
     driver.quit()
+
+    // Convert files
+    await sleep(20000)
+    await convertFiles()
 }
 
 
 const downloadMonthly = async (driver, userConfig) => {
+    // Initiate captcha request
+    console.log('Starting recaptcha solution request...')
+    let requestId = await initiateCaptchaRequest(config.apiKey)
     // Go to URL
     await driver.get(userConfig.URL)
     // Wait for page to load
@@ -314,8 +337,9 @@ const downloadMonthly = async (driver, userConfig) => {
     await driver.findElement(By.xpath('//*[@id="kc-login"]')).click()
     console.log('Log in btn clicked')
 
-    await sleep(5000)
+
     await driver.wait(until.titleContains('SRI en Línea'), 15000)
+    await sleep(5000)
 
     // Go to reports page
     // Click sidebar btn
@@ -372,13 +396,11 @@ const downloadMonthly = async (driver, userConfig) => {
     // Wait for Report page to load    
     await driver.wait(until.titleContains('SISTEMA DE COMPROBANTES'), 15000)
     await driver.wait(until.elementLocated(By.xpath('//*[@id="tituloPagina"]/div/span[1]')), 15000)
-    await sleep(3000)
+    await sleep(2000)
 
     // Loop period
     while ((parseInt(userConfig.startDate.month) != parseInt(userConfig.endDate.month)) || (parseInt(userConfig.startDate.year) != parseInt(userConfig.endDate.year))) {
-        // Initiate captcha request
-        console.log('Starting recaptcha solution request...')
-        const requestId = await initiateCaptchaRequest(config.apiKey)
+
 
         // Select all days => option 1
         await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:dia"]/option[1]')), 15000)
@@ -394,13 +416,21 @@ const downloadMonthly = async (driver, userConfig) => {
 
         // Wait for Recaptcha solution
         console.log('Waiting for recaptcha solution...')
-        const response = await pollForRequestResults(config.apiKey, requestId)
+        let response = await pollForRequestResults(config.apiKey, requestId)
         console.log(response)
 
         // Inject recaptcha
         console.log('Injecting recaptcha solution...')
         await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="${response}";`)
         await driver.executeScript(`rcBuscar();`)
+        
+
+        // check if last loop
+        if (!((parseInt(userConfig.endDate.month) - parseInt(userConfig.startDate.month) == 1) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year)))) {
+            // Initiate captcha request
+            console.log('Starting recaptcha solution request...')
+            requestId = await initiateCaptchaRequest(config.apiKey)
+        }
         await sleep(5000)
 
         // Download files        
@@ -408,11 +438,17 @@ const downloadMonthly = async (driver, userConfig) => {
             // check if file exists
             await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:0:lnkXml"]'))
 
-            for (let i = 0; i < 100; i++) {
-                await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 2000)
-                await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')).click()
-                await sleep(500)
-                console.log(`Downloading file no.${i}`)
+            for (let i = 0; i < 50; i++) {
+                try {
+                    // driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 2000)
+                    driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')).click()
+                    //await sleep(500)
+                    console.log(`Downloading file no.${i}`)
+                }
+                catch (e) {
+                    console.log('File no.' + i + 'does not exists or failed')
+                    break;
+                }
             }
         }
         catch (e) {
@@ -431,13 +467,15 @@ const downloadMonthly = async (driver, userConfig) => {
         await sleep(1500)
     }
 
-    // Convert files
-    convertFiles()
 
     console.log('Process completed...')
-    await sleep(5000)
+    await sleep(2000)
     console.log('Terminating program...')
     driver.quit()
+
+    // Convert files
+    await sleep(20000)
+    await convertFiles()
 }
 
 const convertFiles = async () => {
@@ -468,6 +506,10 @@ const convertFiles = async () => {
 start = async () => {
     // browser options
     const options = new chrome.Options()
+    var logging_prefs = new webdriver.logging.Preferences();
+    logging_prefs.setLevel(webdriver.logging.Type.PERFORMANCE, webdriver.logging.Level.ALL);
+    options.setLoggingPrefs(logging_prefs);
+
     // options.addArguments("--incognito")
     // Needed for headless
     options.addArguments("--window-size=1920,1080")
