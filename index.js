@@ -214,7 +214,7 @@ const downloadReports = async (driver, userConfig) => {
             try {
                 // check if file exists
                 await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:0:lnkXml"]'))
-                for (let i = 0; i < 100; i++) {
+                for (let i = 0; i < 50; i++) {
                     await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 2000)
                     await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')).click()
                     await sleep(500)
