@@ -10,12 +10,12 @@
     },
     "endDate": {
         "day": "14",
-        "month": "1",
+        "month": "2",
         "year": "2020"
     },
     "downloadEmitidos": true,
     "downloadRecibidos": true,
-    "tipoDescarga": "diaria", 
+    "tipoDescarga": "mensual", 
     "emptyDownloadsFolderOnStart": true,
     "emptyOutputFolderOnStart": true,
     "URL": "https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT"    

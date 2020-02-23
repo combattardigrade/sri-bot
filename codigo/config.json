@@ -1,0 +1,22 @@
+{
+    "user": {
+        "username": "1722357629001",
+        "password": "JUAN1722"
+    },
+    "startDate": {
+        "day": "13",
+        "month": "1",
+        "year": "2020"
+    },
+    "endDate": {
+        "day": "14",
+        "month": "2",
+        "year": "2020"
+    },
+    "downloadEmitidos": true,
+    "downloadRecibidos": true,
+    "tipoDescarga": "mensual", 
+    "emptyDownloadsFolderOnStart": true,
+    "emptyOutputFolderOnStart": true,
+    "URL": "https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT"    
+}
