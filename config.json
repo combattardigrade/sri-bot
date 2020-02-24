@@ -1,7 +1,7 @@
 {
     "user": {
-        "username": "1722357629001",
-        "password": "JUAN1722"
+        "username": "1792016495001",
+        "password": "MOLSANDO17920"
     },
     "startDate": {
         "day": "13",
@@ -15,8 +15,8 @@
     },
     "downloadEmitidos": true,
     "downloadRecibidos": true,
-    "tipoDescarga": "diario", 
+    "tipoDescarga": "mensual",
     "emptyDownloadsFolderOnStart": true,
     "emptyOutputFolderOnStart": true,
-    "URL": "https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT"    
+    "URL": "https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT"
 }

@@ -208,7 +208,7 @@ const downloadReports = async (driver, userConfig) => {
                 console.log('Starting recaptcha solution request...')
                 requestId = await initiateCaptchaRequest(config.apiKey)
             }
-            await sleep(4000)  
+            await sleep(4000)
 
             // Download files        
             try {
@@ -258,7 +258,7 @@ const downloadReports = async (driver, userConfig) => {
                 console.log('Starting recaptcha solution request...')
                 requestId = await initiateCaptchaRequest(config.apiKey)
             }
-            await sleep(4000)            
+            await sleep(4000)
 
             // Download files        
             try {
@@ -300,14 +300,13 @@ const downloadReports = async (driver, userConfig) => {
         await sleep(1500)
     }
 
-    console.log('Process completed...')
-    await sleep(2000)
-    console.log('Terminating program...')
-    driver.quit()
-
     // Convert files
     await sleep(20000)
+    console.log('Process completed...')
+    await sleep(2000)
     await convertFiles()
+    console.log('Terminating program...')
+    await driver.quit()
 }
 
 
@@ -423,7 +422,7 @@ const downloadMonthly = async (driver, userConfig) => {
         console.log('Injecting recaptcha solution...')
         await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="${response}";`)
         await driver.executeScript(`rcBuscar();`)
-        
+
 
         // check if last loop
         if (!((parseInt(userConfig.endDate.month) - parseInt(userConfig.startDate.month) == 1) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year)))) {
@@ -433,27 +432,64 @@ const downloadMonthly = async (driver, userConfig) => {
         }
         await sleep(5000)
 
-        // Download files        
+        // File counter
+        let k = 0
+        // Check no. of pages
         try {
-            // check if file exists
-            await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:0:lnkXml"]'))
+            let pages = await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[3]')).getText()
+            pages = pages.split(' of ')
+            pages = pages[1].replace(/\D/g, '')
+            console.log(`Total pages ${pages}`)
 
-            for (let i = 0; i < 50; i++) {
-                try {
-                    // driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 2000)
-                    driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')).click()
-                    //await sleep(500)
-                    console.log(`Downloading file no.${i}`)
+
+            // Loop pages
+            for (let i = 1; i <= pages; i++) {
+                for (let j = 0; j < 50; j++) {
+                    try {
+                        if (i == pages) {
+                            // Count total files in last page                            
+                            console.log('Executing download script no.' + k)
+                            await driver.executeScript(`mojarra.jsfcljs(document.getElementById('frmPrincipal'),{'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml':'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml'},'');return false`)
+                            
+                            k++
+                        } else {
+                            console.log('Executing download script no.' + k)
+                            driver.executeScript(`mojarra.jsfcljs(document.getElementById('frmPrincipal'),{'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml':'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml'},'');return false`)
+                            k++
+                        }
+                    }
+                    catch (e) {
+                        console.log('Error downloading file no.' + k)
+                        break;
+                    }
                 }
-                catch (e) {
-                    console.log('File no.' + i + 'does not exists or failed')
-                    break;
+
+                // Wait for all files to download
+                let waitDownloadsFlag = 1
+                while (waitDownloadsFlag == 1) {
+                    console.log('Waiting for files to download...')
+                    let files = fs.readdirSync(path.resolve('downloads'))
+                    console.log(`Files downloaded: ${files.length} of ${k - 2}`)
+                    if (files.length < (k * 0.95)) {
+                        console.log('Waiting for downloads to complete...')
+                        await sleep(1000)
+                    } else {
+                        console.log('Downloads completed...')
+                        waitDownloadsFlag = 0
+                    }
+                }
+                waitDownloadsFlag = 1
+
+                // Click next page btn
+                if (i != (pages)) {
+                    console.log(`Going to page no.${i + 1}`)
+                    await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[4]')).click()
+                    await sleep(2000)
                 }
             }
         }
         catch (e) {
-            console.log(e)
-            console.log('No files found...')
+            console.log('No pages found')
         }
 
         // Update startDate
@@ -467,15 +503,12 @@ const downloadMonthly = async (driver, userConfig) => {
         await sleep(1500)
     }
 
-
+    // Convert files    
     console.log('Process completed...')
+    await convertFiles()
     await sleep(2000)
     console.log('Terminating program...')
-    driver.quit()
-
-    // Convert files
-    await sleep(20000)
-    await convertFiles()
+    await driver.quit()
 }
 
 const convertFiles = async () => {
@@ -498,7 +531,7 @@ const convertFiles = async () => {
     // create new csv with `facturas`
     const csv = new ObjectsToCsv(facturas)
     // write csv to disk
-    csv.toDisk(path.join('output', crypto.randomBytes(16).toString('hex') + '.csv'))
+    await csv.toDisk(path.join('output', crypto.randomBytes(16).toString('hex') + '.csv'))
     console.log('CSV file created...')
 }
 
@@ -535,7 +568,8 @@ start = async () => {
         'download.default_directory': path.resolve('downloads'),
         'download.prompt_for_download': false,
         "download.directory_upgrade": true,
-        "safebrowsing.enabled": true
+        "safebrowsing.enabled": true,
+        "profile.default_content_setting_values.automatic_downloads": 1 // download multiple files
     })
 
     // Read Json file
