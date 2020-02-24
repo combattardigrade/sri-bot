@@ -17,7 +17,7 @@ const moment = require('moment')
 const config = {
     sitekey: '6Lc6rokUAAAAAJBG2M1ZM1LIgJ85DwbSNNjYoLDk',
     pageurl: 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/menu.jsf',
-    apiKey: 'cb678ca06942cb3636f0c6410c1a258b',
+    apiKey: '',
     apiSubmitUrl: 'http://2captcha.com/in.php',
     apiRetrieveUrl: 'http://2captcha.com/res.php'
 }
@@ -715,6 +715,12 @@ start = async () => {
     // Empty Output folder if set in config
     if (userConfig.emptyOutputFolderOnStart == true) {
         fse.emptyDirSync(path.resolve('output'))
+    }
+
+    // Set API key
+    config.apiKey = userConfig.apiKey
+    if(!config.apiKey) {
+        throw('Insert a valid API Key...')
     }
 
     // start driver

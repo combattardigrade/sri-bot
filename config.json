@@ -18,5 +18,6 @@
     "tipoDescarga": "mensual",
     "emptyDownloadsFolderOnStart": true,
     "emptyOutputFolderOnStart": true,
-    "URL": "https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT"
+    "URL": "https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT",
+    "apiKey": ""
 }
