@@ -170,6 +170,8 @@ const downloadReports = async (driver, userConfig) => {
     // Wait for page element to load
     await driver.wait(until.elementLocated(By.xpath('//*[@id="tituloPagina"]/div/span[1]')), 15000)
 
+    // Total files downloaded flag
+    let totalFiles = 0
 
     // Loop period
     while ((parseInt(userConfig.startDate.day) != parseInt(userConfig.endDate.day)) || (parseInt(userConfig.startDate.month) != parseInt(userConfig.endDate.month)) || (parseInt(userConfig.startDate.year) != parseInt(userConfig.endDate.year))) {
@@ -203,27 +205,89 @@ const downloadReports = async (driver, userConfig) => {
             await sleep(500)
 
             // check if last loop
-            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year)))) {
+            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day) == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year) )) {
                 // Initiate captcha request
                 console.log('Starting recaptcha solution request...')
                 requestId = await initiateCaptchaRequest(config.apiKey)
             }
             await sleep(4000)
 
-            // Download files        
+            // File counter
+            let k = 0
+
+            // Download files
             try {
-                // check if file exists
-                await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:0:lnkXml"]'))
-                for (let i = 0; i < 50; i++) {
-                    await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 2000)
-                    await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')).click()
-                    await sleep(500)
+                // Check no. of pages
+                let pages = await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[3]')).getText()
+                pages = pages.split(' of ')
+                pages = pages[1].replace(/\D/g, '')
+                console.log(`Total pages ${pages}`)
+
+                // Loop pages
+                for (let i = 1; i <= pages; i++) {
+                    for (let j = 0; j < 50; j++) {
+                        try {
+                            if (i == pages) {
+                                // Count total files in last page                            
+                                console.log('Executing download script no.' + k)
+                                await driver.executeScript(`mojarra.jsfcljs(document.getElementById('frmPrincipal'),{'frmPrincipal:tablaCompEmitidos:` + k + `:lnkXml':'frmPrincipal:tablaCompEmitidos:` + k + `:lnkXml'},'');return false`)
+                                
+                                k++
+                            } else {
+                                console.log('Executing download script no.' + k)
+                                driver.executeScript(`mojarra.jsfcljs(document.getElementById('frmPrincipal'),{'frmPrincipal:tablaCompEmitidos:` + k + `:lnkXml':'frmPrincipal:tablaCompEmitidos:` + k + `:lnkXml'},'');return false`)
+                                k++
+                            }
+                        }
+                        catch (e) {
+                            console.log('Error downloading file no.' + k)
+                            break;
+                        }
+                    }
+
+                    // Wait for all files to download
+                    let waitDownloadsFlag = 1
+                    while (waitDownloadsFlag == 1) {
+                        console.log('Waiting for files to download...')
+                        let files = fs.readdirSync(path.resolve('downloads'))
+                        console.log(`Files downloaded: ${files.length} of ${(k + totalFiles) - 2}`)
+                        if (files.length < ((k + totalFiles - 2) * 0.95)) {
+                            console.log('Waiting for downloads to complete...')
+                            await sleep(1000)
+                        } else {
+                            console.log('Downloads completed...')
+                            waitDownloadsFlag = 0
+                        }
+                    }
+
+                    // Click next page btn if it's not last page
+                    if (i != (pages)) {
+                        console.log(`Going to page no.${i + 1}`)
+                        await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[4]')).click()
+                        await sleep(2000)
+                    }
                 }
             }
             catch (e) {
-                console.log(e)
-                console.log('No files found...')
+                console.log('No pages found')
             }
+
+            // Update total files counter
+            totalFiles += k - 2
+
+            try {
+                // If it's last page return to first page to reset the next month
+                console.log(`Returning to first page...`)
+                await sleep(2500)
+                await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')), 4000)
+                await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')).click()
+            }
+            catch (e) {
+                console.log('Failed to return to first page...')
+            }
+
+            // Wait before next search
+            await sleep(2000)
         }
 
         if (userConfig.downloadRecibidos == true) {
@@ -253,35 +317,89 @@ const downloadReports = async (driver, userConfig) => {
             await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="${response}";`)
             await driver.executeScript(`rcBuscar();`)
             // check if last loop
-            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year)))) {
+            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day) == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year))) {
                 // Initiate captcha request
                 console.log('Starting recaptcha solution request...')
                 requestId = await initiateCaptchaRequest(config.apiKey)
             }
             await sleep(4000)
 
-            // Download files        
-            try {
-                // check if file exists
-                await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:0:lnkXml"]'))
+            // File counter
+            let k = 0
 
-                for (let i = 0; i < 50; i++) {
-                    try {
-                        // driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')), 2000)
-                        driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + i + ':lnkXml"]')).click()
-                        //await sleep(500)
-                        console.log(`Downloading file no.${i}`)
+            // Download files
+            try {
+                // Check no. of pages
+                let pages = await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[3]')).getText()
+                pages = pages.split(' of ')
+                pages = pages[1].replace(/\D/g, '')
+                console.log(`Total pages ${pages}`)
+
+                // Loop pages
+                for (let i = 1; i <= pages; i++) {
+                    for (let j = 0; j < 50; j++) {
+                        try {
+                            if (i == pages) {
+                                // Count total files in last page                            
+                                console.log('Executing download script no.' + k)
+                                await driver.executeScript(`mojarra.jsfcljs(document.getElementById('frmPrincipal'),{'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml':'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml'},'');return false`)
+                                
+                                k++
+                            } else {
+                                console.log('Executing download script no.' + k)
+                                driver.executeScript(`mojarra.jsfcljs(document.getElementById('frmPrincipal'),{'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml':'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml'},'');return false`)
+                                k++
+                            }
+                        }
+                        catch (e) {
+                            console.log('Error downloading file no.' + k)
+                            break;
+                        }
                     }
-                    catch (e) {
-                        console.log('File no.' + i + 'does not exists or failed')
-                        break;
+
+                    // Wait for all files to download
+                    let waitDownloadsFlag = 1
+                    while (waitDownloadsFlag == 1) {
+                        console.log('Waiting for files to download...')
+                        let files = fs.readdirSync(path.resolve('downloads'))
+                        console.log(`Files downloaded: ${files.length} of ${(k + totalFiles) - 2}`)
+                        if (files.length < ((k + totalFiles - 2) * 0.95)) {
+                            console.log('Waiting for downloads to complete...')
+                            await sleep(1000)
+                        } else {
+                            console.log('Downloads completed...')
+                            waitDownloadsFlag = 0
+                        }
+                    }
+
+                    // Click next page btn if it's not last page
+                    if (i != (pages)) {
+                        console.log(`Going to page no.${i + 1}`)
+                        await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[4]')).click()
+                        await sleep(2000)
                     }
                 }
             }
             catch (e) {
-                console.log(e)
-                console.log('No files found...')
+                console.log('No pages found')
             }
+
+            // Update total files counter
+            totalFiles += k - 2
+
+            try {
+                // If it's last page return to first page to reset the next month
+                console.log(`Returning to first page...`)
+                await sleep(2500)
+                await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[1]')), 4000)
+                await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[1]')).click()
+            }
+            catch (e) {
+                console.log('Failed to return to first page...')
+            }
+
+            // Wait before next search
+            await sleep(2000)
         }
 
 
@@ -296,15 +414,14 @@ const downloadReports = async (driver, userConfig) => {
             }
         }
 
-        // Wait before next month
-        await sleep(1500)
+        // Wait before next day
+        await sleep(2000)
     }
 
-    // Convert files
-    await sleep(20000)
+    // Convert files    
     console.log('Process completed...')
-    await sleep(2000)
     await convertFiles()
+    await sleep(2000)
     console.log('Terminating program...')
     await driver.quit()
 }
@@ -472,7 +589,7 @@ const downloadMonthly = async (driver, userConfig) => {
                     console.log('Waiting for files to download...')
                     let files = fs.readdirSync(path.resolve('downloads'))
                     console.log(`Files downloaded: ${files.length} of ${(k + totalFiles) - 2}`)
-                    if (files.length < ((k + totalFiles) * 0.95)) {
+                    if (files.length < ((k + totalFiles - 2) * 0.95)) {
                         console.log('Waiting for downloads to complete...')
                         await sleep(1000)
                     } else {
@@ -486,7 +603,7 @@ const downloadMonthly = async (driver, userConfig) => {
                     console.log(`Going to page no.${i + 1}`)
                     await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[4]')).click()
                     await sleep(2000)
-                } 
+                }
             }
         }
         catch (e) {
@@ -494,7 +611,7 @@ const downloadMonthly = async (driver, userConfig) => {
         }
 
         // Update total files counter
-        totalFiles += k
+        totalFiles += k - 2
 
         // Update startDate
         userConfig.startDate.month = parseInt(userConfig.startDate.month) + 1
@@ -507,10 +624,10 @@ const downloadMonthly = async (driver, userConfig) => {
             // If it's last page return to first page to reset the next month
             console.log(`Returning to first page...`)
             await sleep(2500)
-            await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[1]')), 15000)
-            await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[1]')).click()            
+            await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[1]')), 5000)
+            await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[1]')).click()
         }
-        catch(e) {
+        catch (e) {
             console.log('Failed to return to first page...')
         }
 
