@@ -397,6 +397,9 @@ const downloadMonthly = async (driver, userConfig) => {
     await driver.wait(until.elementLocated(By.xpath('//*[@id="tituloPagina"]/div/span[1]')), 15000)
     await sleep(2000)
 
+    // Total files downloaded flag
+    let totalFiles = 0
+
     // Loop period
     while ((parseInt(userConfig.startDate.month) != parseInt(userConfig.endDate.month)) || (parseInt(userConfig.startDate.year) != parseInt(userConfig.endDate.year))) {
 
@@ -441,7 +444,6 @@ const downloadMonthly = async (driver, userConfig) => {
             pages = pages[1].replace(/\D/g, '')
             console.log(`Total pages ${pages}`)
 
-
             // Loop pages
             for (let i = 1; i <= pages; i++) {
                 for (let j = 0; j < 50; j++) {
@@ -450,7 +452,7 @@ const downloadMonthly = async (driver, userConfig) => {
                             // Count total files in last page                            
                             console.log('Executing download script no.' + k)
                             await driver.executeScript(`mojarra.jsfcljs(document.getElementById('frmPrincipal'),{'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml':'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml'},'');return false`)
-                            
+
                             k++
                         } else {
                             console.log('Executing download script no.' + k)
@@ -469,8 +471,8 @@ const downloadMonthly = async (driver, userConfig) => {
                 while (waitDownloadsFlag == 1) {
                     console.log('Waiting for files to download...')
                     let files = fs.readdirSync(path.resolve('downloads'))
-                    console.log(`Files downloaded: ${files.length} of ${k - 2}`)
-                    if (files.length < (k * 0.95)) {
+                    console.log(`Files downloaded: ${files.length} of ${(k + totalFiles) - 2}`)
+                    if (files.length < ((k + totalFiles) * 0.95)) {
                         console.log('Waiting for downloads to complete...')
                         await sleep(1000)
                     } else {
@@ -478,19 +480,21 @@ const downloadMonthly = async (driver, userConfig) => {
                         waitDownloadsFlag = 0
                     }
                 }
-                
 
-                // Click next page btn
+                // Click next page btn if it's not last page
                 if (i != (pages)) {
                     console.log(`Going to page no.${i + 1}`)
                     await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[4]')).click()
                     await sleep(2000)
-                }
+                } 
             }
         }
         catch (e) {
             console.log('No pages found')
         }
+
+        // Update total files counter
+        totalFiles += k
 
         // Update startDate
         userConfig.startDate.month = parseInt(userConfig.startDate.month) + 1
@@ -499,8 +503,19 @@ const downloadMonthly = async (driver, userConfig) => {
             userConfig.startDate.year = parseInt(userConfig.startDate.year) + 1
         }
 
+        try {
+            // If it's last page return to first page to reset the next month
+            console.log(`Returning to first page...`)
+            await sleep(2500)
+            await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[1]')), 15000)
+            await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos_paginator_bottom"]/span[1]')).click()            
+        }
+        catch(e) {
+            console.log('Failed to return to first page...')
+        }
+
         // Wait before next month
-        await sleep(1500)
+        await sleep(2000)
     }
 
     // Convert files    

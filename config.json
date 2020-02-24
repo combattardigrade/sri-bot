@@ -5,12 +5,12 @@
     },
     "startDate": {
         "day": "13",
-        "month": "1",
-        "year": "2020"
+        "month": "12",
+        "year": "2019"
     },
     "endDate": {
         "day": "14",
-        "month": "2",
+        "month": "3",
         "year": "2020"
     },
     "downloadEmitidos": true,
