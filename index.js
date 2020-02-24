@@ -478,7 +478,7 @@ const downloadMonthly = async (driver, userConfig) => {
                         waitDownloadsFlag = 0
                     }
                 }
-                waitDownloadsFlag = 1
+                
 
                 // Click next page btn
                 if (i != (pages)) {
