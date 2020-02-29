@@ -22,12 +22,12 @@ const config = {
     apiRetrieveUrl: 'http://2captcha.com/res.php'
 }
 
-const initiateCaptchaRequest = async (apiKey) => {
+const initiateCaptchaRequest = async (apiKey, pageurl) => {
     const formData = {
         method: 'userrecaptcha',
         googlekey: config.sitekey,
         key: config.apiKey,
-        pageurl: config.pageurl,
+        pageurl: pageurl,
         json: 1
     }
     console.log(`Submitting solution request for ${config.pageurl}`)
@@ -70,7 +70,7 @@ const sleep = (milliseconds) => {
 const downloadReports = async (driver, userConfig) => {
     // Initiate captcha request
     console.log('Starting recaptcha solution request...')
-    let requestId = await initiateCaptchaRequest(config.apiKey)
+    let requestId = await initiateCaptchaRequest(config.apiKey, userConfig.downloadEmitidos == true ? 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/menu.jsf' : 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/recibidos/comprobantesRecibidos.jsf')
     // Go to URL
     await driver.get(userConfig.URL)
     // await sleep(5000)
@@ -97,86 +97,91 @@ const downloadReports = async (driver, userConfig) => {
     await sleep(5000)
     await driver.wait(until.titleContains('SRI en Línea'), 15000)
 
-    // Go to reports page
-    // Click sidebar btn
-    await driver.wait(until.elementLocated(By.xpath('//*[@id="sri-menu"]')), 15000)
-    await driver.findElement(By.xpath('//*[@id="sri-menu"]')).click()
-    await sleep(500)
-
-    console.log('Check if `RISE` option exists...')
-    let riseFlag = 0
-    try {
-        // Check if User has `RISE`
-        const riseBtn = await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[2]/div[1]/a/span[3]'))
-        const riseExists = await riseBtn.getText()
-
-        if (riseExists == 'RISE') {
-            console.log('RISE option exists')
-            riseFlag = 1
-        } else {
-            riseFlag = 0
-        }
-    }
-    catch (e) {
-        console.log('RISE option does not exist')
-        riseFlag = 0
-    }
-    await sleep(500)
-
-    // Click facturacion en linea btn
-    // Check if user has `RISE`
-    if (riseFlag == 0) {
-        await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[1]/a')), 15000)
-        await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[1]/a')).click()
-        await sleep(500)
-    } else {
-        await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[1]/a')), 15000)
-        await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[1]/a')).click()
-        await sleep(500)
-    }
-
-    // Click Produccion btn
-    // Check if user has `RISE`
-    if (riseFlag == 0) {
-        await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[2]/div/p-panelmenusub/ul/li[3]/a')), 15000)
-        await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[2]/div/p-panelmenusub/ul/li[3]/a')).click()
-        await sleep(500)
-    } else {
-        await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[3]/a')), 15000)
-        await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[3]/a')).click()
-        await sleep(500)
-    }
-
-    // Click Consultas btn
-    if (riseFlag == 0) {
-        await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[2]/div/p-panelmenusub/ul/li[3]/p-panelmenusub/ul/li[2]/a')), 15000)
-        await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[2]/div/p-panelmenusub/ul/li[3]/p-panelmenusub/ul/li[2]/a')).click()
-        await sleep(500)
-    } else {
-        await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[3]/p-panelmenusub/ul/li[2]/a')), 15000)
-        await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[3]/p-panelmenusub/ul/li[2]/a')).click()
-        await sleep(500)
-    }
-
-    // Wait for Consulta de comprobantes page
-    await driver.wait(until.titleContains('SISTEMA DE COMPROBANTES'), 15000)
-    // Wait for `Comprobantes electronicos recibidos y/o emitidos` link to load
-    await driver.wait(until.elementLocated(By.xpath('//*[@id="consultaDocumentoForm:panelPrincipal"]/ul/li[2]/a')), 15000)
-    await driver.findElement(By.xpath('//*[@id="consultaDocumentoForm:panelPrincipal"]/ul/li[2]/a')).click()
-    await sleep(3000)
-
-    // Wait for Report seach page to load    
-    await driver.wait(until.titleContains('SISTEMA DE COMPROBANTES'), 15000)
-    // Wait for page element to load
-    await driver.wait(until.elementLocated(By.xpath('//*[@id="tituloPagina"]/div/span[1]')), 15000)
-
     // Total files downloaded flag
     let totalFiles = 0
+
+    let firstLoopFlag = 0
 
     // Loop period
     while ((parseInt(userConfig.startDate.day) != parseInt(userConfig.endDate.day)) || (parseInt(userConfig.startDate.month) != parseInt(userConfig.endDate.month)) || (parseInt(userConfig.startDate.year) != parseInt(userConfig.endDate.year))) {
 
-        if (userConfig.downloadEmitidos == true) {
+        if (userConfig.downloadEmitidos == true && userConfig.downloadRecibidos == false) {
+            if (firstLoopFlag == 0) {
+                // Go to reports page
+                // Click sidebar btn
+                await driver.wait(until.elementLocated(By.xpath('//*[@id="sri-menu"]')), 15000)
+                await driver.findElement(By.xpath('//*[@id="sri-menu"]')).click()
+                await sleep(500)
+
+                console.log('Check if `RISE` option exists...')
+                let riseFlag = 0
+                try {
+                    // Check if User has `RISE`
+                    const riseBtn = await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[2]/div[1]/a/span[3]'))
+                    const riseExists = await riseBtn.getText()
+
+                    if (riseExists == 'RISE') {
+                        console.log('RISE option exists')
+                        riseFlag = 1
+                    } else {
+                        riseFlag = 0
+                    }
+                }
+                catch (e) {
+                    console.log('RISE option does not exist')
+                    riseFlag = 0
+                }
+                await sleep(500)
+
+                // Click facturacion en linea btn
+                // Check if user has `RISE`
+                if (riseFlag == 0) {
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[1]/a')), 15000)
+                    await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[1]/a')).click()
+                    await sleep(500)
+                } else {
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[1]/a')), 15000)
+                    await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[1]/a')).click()
+                    await sleep(500)
+                }
+
+                // Click Produccion btn
+                // Check if user has `RISE`
+                if (riseFlag == 0) {
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[2]/div/p-panelmenusub/ul/li[3]/a')), 15000)
+                    await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[2]/div/p-panelmenusub/ul/li[3]/a')).click()
+                    await sleep(500)
+                } else {
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[3]/a')), 15000)
+                    await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[3]/a')).click()
+                    await sleep(500)
+                }
+
+                // Click Consultas btn
+                if (riseFlag == 0) {
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[2]/div/p-panelmenusub/ul/li[3]/p-panelmenusub/ul/li[2]/a')), 15000)
+                    await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[2]/div/p-panelmenusub/ul/li[3]/p-panelmenusub/ul/li[2]/a')).click()
+                    await sleep(500)
+                } else {
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[3]/p-panelmenusub/ul/li[2]/a')), 15000)
+                    await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[3]/p-panelmenusub/ul/li[2]/a')).click()
+                    await sleep(500)
+                }
+
+                // Wait for Consulta de comprobantes page
+                await driver.wait(until.titleContains('SISTEMA DE COMPROBANTES'), 15000)
+                // Wait for `Comprobantes electronicos recibidos y/o emitidos` link to load
+                await driver.wait(until.elementLocated(By.xpath('//*[@id="consultaDocumentoForm:panelPrincipal"]/ul/li[2]/a')), 15000)
+                await driver.findElement(By.xpath('//*[@id="consultaDocumentoForm:panelPrincipal"]/ul/li[2]/a')).click()
+                await sleep(3000)
+            }
+
+            firstLoopFlag = 1
+
+            // Wait for Report seach page to load    
+            await driver.wait(until.titleContains('SISTEMA DE COMPROBANTES'), 15000)
+            // Wait for page element to load
+            await driver.wait(until.elementLocated(By.xpath('//*[@id="tituloPagina"]/div/span[1]')), 15000)
             // Get recibos emitidos
             console.log('Getting `recibos emitidos...`')
 
@@ -208,10 +213,10 @@ const downloadReports = async (driver, userConfig) => {
             await sleep(500)
 
             // check if last loop
-            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day) == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year) )) {
+            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day) == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year))) {
                 // Initiate captcha request
                 console.log('Starting recaptcha solution request...')
-                requestId = await initiateCaptchaRequest(config.apiKey)
+                requestId = await initiateCaptchaRequest(config.apiKey, userConfig.downloadEmitidos == true ? 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/menu.jsf' : 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/recibidos/comprobantesRecibidos.jsf')
             }
             await sleep(4000)
 
@@ -234,7 +239,7 @@ const downloadReports = async (driver, userConfig) => {
                                 // Count total files in last page                            
                                 console.log('Executing download script no.' + k)
                                 await driver.executeScript(`mojarra.jsfcljs(document.getElementById('frmPrincipal'),{'frmPrincipal:tablaCompEmitidos:` + k + `:lnkXml':'frmPrincipal:tablaCompEmitidos:` + k + `:lnkXml'},'');return false`)
-                                
+
                                 k++
                             } else {
                                 console.log('Executing download script no.' + k)
@@ -278,37 +283,100 @@ const downloadReports = async (driver, userConfig) => {
             // Update total files counter
             totalFiles += k - 2
 
-            try {
-                // If it's last page return to first page to reset the next month
-                console.log(`Returning to first page...`)
-                await sleep(2500)
-                await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')), 2000)
-                await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')).click()
-            }
-            catch (e) {
-                console.log('Failed to return to first page...')
+            if (pages > 1) {
+                try {
+                    // If it's last page return to first page to reset the next month
+                    console.log(`Returning to first page...`)
+                    await sleep(2500)
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')), 2000)
+                    await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')).click()
+                }
+                catch (e) {
+                    console.log('Failed to return to first page...')
+                }
             }
 
             // Wait before next search
             await sleep(1000)
         }
 
-        if (userConfig.downloadRecibidos == true) {
+        if (userConfig.downloadRecibidos == true && userConfig.downloadEmitidos == false) {
             // Get recibos recibidos
             console.log('Getting `recibos recibidos...`')
 
-            // Select receipt type = Emitidos
-            await driver.findElement(By.xpath('//*[@id="frmPrincipal:cmbProcesos"]/option[2]')).click()
-            await sleep(2000)
+            if (firstLoopFlag == 0) {
 
-            // Prepare date string
-            let day = (userConfig.startDate.day.toString()).length == 1 ? '0' + userConfig.startDate.day.toString() : userConfig.startDate.day.toString()
-            let month = (userConfig.startDate.month.toString()).length == 1 ? '0' + userConfig.startDate.month.toString() : userConfig.startDate.month.toString()
-            let date = day + '/' + month + '/' + userConfig.startDate.year.toString()
-            // Clear date input
-            await driver.findElement(By.xpath('//*[@id="frmPrincipal:calendarFechaDesde_input"]')).clear()
-            // Write date
-            await driver.findElement(By.xpath('//*[@id="frmPrincipal:calendarFechaDesde_input"]')).sendKeys(date)
+                // Go to reports page
+                // Click sidebar btn
+                console.log('Click menu btn...')
+                await driver.wait(until.elementLocated(By.xpath('//*[@id="sri-menu"]')), 15000)
+                await driver.findElement(By.xpath('//*[@id="sri-menu"]')).click()
+                await sleep(500)
+
+
+                console.log('Check if `RISE` option exists...')
+                let riseFlag = 0
+                try {
+                    // Check if User has `RISE`
+                    const riseBtn = await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[2]/div[1]/a/span[3]'))
+                    const riseExists = await riseBtn.getText()
+
+                    if (riseExists == 'RISE') {
+                        console.log('RISE option exists')
+                        riseFlag = 1
+                    } else {
+                        riseFlag = 0
+                    }
+                }
+                catch (e) {
+                    console.log('RISE option does not exist')
+                    riseFlag = 0
+                }
+                await sleep(500)
+
+                // Click facturacion en linea btn
+                // Check if user has `RISE`
+                if (riseFlag == 0) {
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[1]/a')), 15000)
+                    await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[1]/a')).click()
+                    await sleep(500)
+                } else {
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[1]/a')), 15000)
+                    await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[1]/a')).click()
+                    await sleep(500)
+                }
+
+                // Click Comprobantes Electronicos Recibidos
+                // Check if user has `RISE`
+                if (riseFlag == 0) {
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[2]/div/p-panelmenusub/ul/li[2]/a')), 15000)
+                    await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[4]/div[2]/div/p-panelmenusub/ul/li[2]/a')).click()
+                    await sleep(500)
+                } else {
+                    await driver.wait(until.elementLocated(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[2]/a')), 15000)
+                    await driver.findElement(By.xpath('//*[@id="mySidebar"]/p-panelmenu/div/div[5]/div[2]/div/p-panelmenusub/ul/li[2]/a')).click()
+                    await sleep(500)
+                }
+
+                // Wait for Report page to load    
+                await driver.wait(until.titleContains('SISTEMA DE COMPROBANTES'), 15000)
+                await driver.wait(until.elementLocated(By.xpath('//*[@id="tituloPagina"]/div/span[1]')), 15000)
+                await sleep(2000)
+            }
+
+            firstLoopFlag = 1
+
+            // Select all days => option 1
+            await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:dia"]/option[' + (parseInt(userConfig.startDate.day) + 1) + ']')), 15000)
+            await driver.findElement(By.xpath('//*[@id="frmPrincipal:dia"]/option[' + (parseInt(userConfig.startDate.day) + 1) + ']')).click()
+
+            // Select month
+            await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:mes"]/option[' + parseInt(userConfig.startDate.month) + ']')), 15000)
+            await driver.findElement(By.xpath('//*[@id="frmPrincipal:mes"]/option[' + parseInt(userConfig.startDate.month) + ']')).click()
+
+            // Select year       
+            let yearSelector = parseInt(userConfig.startDate.year) == moment().format('Y') ? 1 : moment().format('Y') - parseInt(userConfig.startDate.year) + 1
+            await driver.findElement(By.xpath('//*[@id="frmPrincipal:ano"]/option[' + parseInt(yearSelector) + ']')).click()
 
             // Wait for Recaptcha solution
             console.log('Waiting for recaptcha solution...')
@@ -317,14 +385,10 @@ const downloadReports = async (driver, userConfig) => {
 
             // Inject recaptcha
             console.log('Injecting recaptcha solution...')
+            await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="";`)
             await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="${response}";`)
             await driver.executeScript(`rcBuscar();`)
-            // check if last loop
-            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day) == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year))) {
-                // Initiate captcha request
-                console.log('Starting recaptcha solution request...')
-                requestId = await initiateCaptchaRequest(config.apiKey)
-            }
+
             await sleep(4000)
 
             // File counter
@@ -346,7 +410,7 @@ const downloadReports = async (driver, userConfig) => {
                                 // Count total files in last page                            
                                 console.log('Executing download script no.' + k)
                                 await driver.executeScript(`mojarra.jsfcljs(document.getElementById('frmPrincipal'),{'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml':'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml'},'');return false`)
-                                
+
                                 k++
                             } else {
                                 console.log('Executing download script no.' + k)
@@ -382,6 +446,7 @@ const downloadReports = async (driver, userConfig) => {
                         await sleep(2000)
                     }
                 }
+
             }
             catch (e) {
                 console.log('No pages found')
@@ -389,6 +454,7 @@ const downloadReports = async (driver, userConfig) => {
 
             // Update total files counter
             totalFiles += k - 2
+
 
             try {
                 // If it's last page return to first page to reset the next month
@@ -400,6 +466,21 @@ const downloadReports = async (driver, userConfig) => {
             catch (e) {
                 console.log('Failed to return to first page...')
             }
+
+
+           
+            // await driver.executeScript("window.scrollTo(0, 0);")
+            // await driver.findElement(By.xpath('//*[@id="btnRecaptcha"]')).click()
+            // console.log('Reloading page...')
+            // await driver.navigate().refresh();
+            await driver.executeScript(`rcBuscar();`)
+            console.log('Reloading recaptcha...')
+            //await driver.findElement(By.xpath('//*[@id="btnRecaptcha"]')).click()
+
+            // Initiate captcha request
+            console.log('Starting recaptcha solution request...')
+            requestId = await initiateCaptchaRequest(config.apiKey, 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/recibidos/comprobantesRecibidos.jsf')
+            console.log(requestId)
 
             // Wait before next search
             await sleep(2000)
@@ -433,7 +514,7 @@ const downloadReports = async (driver, userConfig) => {
 const downloadMonthly = async (driver, userConfig) => {
     // Initiate captcha request
     console.log('Starting recaptcha solution request...')
-    let requestId = await initiateCaptchaRequest(config.apiKey)
+    let requestId = await initiateCaptchaRequest(config.apiKey, config.pageurl)
     // Go to URL
     await driver.get(userConfig.URL)
     // Wait for page to load
@@ -551,7 +632,7 @@ const downloadMonthly = async (driver, userConfig) => {
         if (!((parseInt(userConfig.endDate.month) - parseInt(userConfig.startDate.month) == 1) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year)))) {
             // Initiate captcha request
             console.log('Starting recaptcha solution request...')
-            requestId = await initiateCaptchaRequest(config.apiKey)
+            requestId = await initiateCaptchaRequest(config.apiKey, config.pageurl)
         }
         await sleep(5000)
 
@@ -722,8 +803,8 @@ start = async () => {
 
     // Set API key
     config.apiKey = userConfig.apiKey
-    if(!config.apiKey) {
-        throw('Insert a valid API Key...')
+    if (!config.apiKey) {
+        throw ('Insert a valid API Key...')
     }
 
     // start driver

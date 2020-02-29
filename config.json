@@ -4,7 +4,7 @@
         "password": "MOLSANDO17920"
     },
     "startDate": {
-        "day": "13",
+        "day": "15",
         "month": "12",
         "year": "2019"
     },
@@ -13,8 +13,8 @@
         "month": "2",
         "year": "2020"
     },
-    "downloadEmitidos": true,
-    "downloadRecibidos": false,
+    "downloadEmitidos": false,
+    "downloadRecibidos": true,
     "tipoDescarga": "diario",
     "emptyDownloadsFolderOnStart": true,
     "emptyOutputFolderOnStart": true,
