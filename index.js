@@ -193,6 +193,9 @@ const downloadReports = async (driver, userConfig) => {
             // Write date
             await driver.findElement(By.xpath('//*[@id="frmPrincipal:calendarFechaDesde_input"]')).sendKeys(date)
 
+            // Select document type
+            await driver.findElement(By.xpath('//*[@id="frmPrincipal:cmbTipoComprobante"]/option[4]')).click()
+
             // Wait for Recaptcha solution
             console.log('Waiting for recaptcha solution...')
             let response = await pollForRequestResults(config.apiKey, requestId)
@@ -279,7 +282,7 @@ const downloadReports = async (driver, userConfig) => {
                 // If it's last page return to first page to reset the next month
                 console.log(`Returning to first page...`)
                 await sleep(2500)
-                await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')), 4000)
+                await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')), 2000)
                 await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')).click()
             }
             catch (e) {
@@ -287,7 +290,7 @@ const downloadReports = async (driver, userConfig) => {
             }
 
             // Wait before next search
-            await sleep(2000)
+            await sleep(1000)
         }
 
         if (userConfig.downloadRecibidos == true) {

@@ -14,10 +14,10 @@
         "year": "2020"
     },
     "downloadEmitidos": true,
-    "downloadRecibidos": true,
-    "tipoDescarga": "mensual",
+    "downloadRecibidos": false,
+    "tipoDescarga": "diario",
     "emptyDownloadsFolderOnStart": true,
     "emptyOutputFolderOnStart": true,
     "URL": "https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT",
-    "apiKey": ""
+    "apiKey": "cb678ca06942cb3636f0c6410c1a258b"
 }
