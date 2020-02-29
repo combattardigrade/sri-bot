@@ -174,14 +174,15 @@ const downloadReports = async (driver, userConfig) => {
                 await driver.wait(until.elementLocated(By.xpath('//*[@id="consultaDocumentoForm:panelPrincipal"]/ul/li[2]/a')), 15000)
                 await driver.findElement(By.xpath('//*[@id="consultaDocumentoForm:panelPrincipal"]/ul/li[2]/a')).click()
                 await sleep(3000)
+
+                // Wait for Report seach page to load    
+                await driver.wait(until.titleContains('SISTEMA DE COMPROBANTES'), 15000)
+                // Wait for page element to load
+                await driver.wait(until.elementLocated(By.xpath('//*[@id="tituloPagina"]/div/span[1]')), 15000)
             }
 
             firstLoopFlag = 1
 
-            // Wait for Report seach page to load    
-            await driver.wait(until.titleContains('SISTEMA DE COMPROBANTES'), 15000)
-            // Wait for page element to load
-            await driver.wait(until.elementLocated(By.xpath('//*[@id="tituloPagina"]/div/span[1]')), 15000)
             // Get recibos emitidos
             console.log('Getting `recibos emitidos...`')
 
@@ -208,16 +209,11 @@ const downloadReports = async (driver, userConfig) => {
 
             // Inject recaptcha
             console.log('Injecting recaptcha solution...')
+            await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="";`)
             await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="${response}";`)
-            await driver.executeScript(`rcBuscar();`)
-            await sleep(500)
+            await driver.executeScript(`rcBuscar();`)                     
 
-            // check if last loop
-            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day) == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year))) {
-                // Initiate captcha request
-                console.log('Starting recaptcha solution request...')
-                requestId = await initiateCaptchaRequest(config.apiKey, userConfig.downloadEmitidos == true ? 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/menu.jsf' : 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/recibidos/comprobantesRecibidos.jsf')
-            }
+           
             await sleep(4000)
 
             // File counter
@@ -283,17 +279,26 @@ const downloadReports = async (driver, userConfig) => {
             // Update total files counter
             totalFiles += k - 2
 
-            if (pages > 1) {
-                try {
-                    // If it's last page return to first page to reset the next month
-                    console.log(`Returning to first page...`)
-                    await sleep(2500)
-                    await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')), 2000)
-                    await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')).click()
-                }
-                catch (e) {
-                    console.log('Failed to return to first page...')
-                }
+
+            try {
+                // If it's last page return to first page to reset the next month
+                console.log(`Returning to first page...`)
+                await sleep(2500)
+                await driver.wait(until.elementLocated(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')), 2000)
+                await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos_paginator_bottom"]/span[1]')).click()
+            }
+            catch (e) {
+                console.log('Failed to return to first page...')
+            }
+
+            await driver.executeScript(`rcBuscar();`)
+            console.log('Reloading recaptcha...')
+
+            // check if last loop
+            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day) == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year))) {
+                // Initiate captcha request
+                console.log('Starting recaptcha solution request...')
+                requestId = await initiateCaptchaRequest(config.apiKey, userConfig.downloadEmitidos == true ? 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/menu.jsf' : 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/recibidos/comprobantesRecibidos.jsf')
             }
 
             // Wait before next search
@@ -468,11 +473,6 @@ const downloadReports = async (driver, userConfig) => {
             }
 
 
-           
-            // await driver.executeScript("window.scrollTo(0, 0);")
-            // await driver.findElement(By.xpath('//*[@id="btnRecaptcha"]')).click()
-            // console.log('Reloading page...')
-            // await driver.navigate().refresh();
             await driver.executeScript(`rcBuscar();`)
             console.log('Reloading recaptcha...')
             //await driver.findElement(By.xpath('//*[@id="btnRecaptcha"]')).click()

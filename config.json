@@ -13,8 +13,8 @@
         "month": "2",
         "year": "2020"
     },
-    "downloadEmitidos": false,
-    "downloadRecibidos": true,
+    "downloadEmitidos": true,
+    "downloadRecibidos": false,
     "tipoDescarga": "diario",
     "emptyDownloadsFolderOnStart": true,
     "emptyOutputFolderOnStart": true,
