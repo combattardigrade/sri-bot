@@ -26,11 +26,11 @@ const initiateCaptchaRequest = async (apiKey, pageurl) => {
     const formData = {
         method: 'userrecaptcha',
         googlekey: config.sitekey,
-        key: config.apiKey,
+        key: apiKey,
         pageurl: pageurl,
         json: 1
     }
-    console.log(`Submitting solution request for ${config.pageurl}`)
+    console.log(`Submitting solution request for ${pageurl}`)
     const response = await request.post(config.apiSubmitUrl, { form: formData })
     console.log(response)
     return JSON.parse(response).request
@@ -69,8 +69,9 @@ const sleep = (milliseconds) => {
 
 const downloadReports = async (driver, userConfig) => {
     // Initiate captcha request
-    console.log('Starting recaptcha solution request...')
-    let requestId = await initiateCaptchaRequest(config.apiKey, userConfig.downloadEmitidos == true ? 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/menu.jsf' : 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/recibidos/comprobantesRecibidos.jsf')
+    // console.log('Starting recaptcha solution request...')
+    // requestId = await initiateCaptchaRequest(config.apiKey, config.pageurl)
+    // console.log(requestId)
     // Go to URL
     await driver.get(userConfig.URL)
     // await sleep(5000)
@@ -179,8 +180,12 @@ const downloadReports = async (driver, userConfig) => {
                 await driver.wait(until.titleContains('SISTEMA DE COMPROBANTES'), 15000)
                 // Wait for page element to load
                 await driver.wait(until.elementLocated(By.xpath('//*[@id="tituloPagina"]/div/span[1]')), 15000)
+
+                await driver.executeScript(`rcBuscar();`)
+
             }
 
+            await sleep(1000)
             firstLoopFlag = 1
 
             // Get recibos emitidos
@@ -202,6 +207,10 @@ const downloadReports = async (driver, userConfig) => {
             // Select document type
             await driver.findElement(By.xpath('//*[@id="frmPrincipal:cmbTipoComprobante"]/option[4]')).click()
 
+            // Initiate captcha request
+            console.log('Starting recaptcha solution request...')
+            let requestId = await initiateCaptchaRequest(config.apiKey, 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/menu.jsf')
+
             // Wait for Recaptcha solution
             console.log('Waiting for recaptcha solution...')
             let response = await pollForRequestResults(config.apiKey, requestId)
@@ -211,9 +220,15 @@ const downloadReports = async (driver, userConfig) => {
             console.log('Injecting recaptcha solution...')
             await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="";`)
             await driver.executeScript(`document.getElementById("g-recaptcha-response").innerHTML="${response}";`)
-            await driver.executeScript(`rcBuscar();`)                     
+            await driver.executeScript(`rcBuscar();`)
 
-           
+            // check if last loop
+            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day) == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year))) {
+                // Initiate captcha request
+                console.log('Starting recaptcha solution request...')
+                requestId = await initiateCaptchaRequest(config.apiKey, 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/menu.jsf')
+            }
+
             await sleep(4000)
 
             // File counter
@@ -294,23 +309,22 @@ const downloadReports = async (driver, userConfig) => {
             await driver.executeScript(`rcBuscar();`)
             console.log('Reloading recaptcha...')
 
-            // check if last loop
-            if (!(parseInt(userConfig.endDate.day) - parseInt(userConfig.startDate.day) == 1) && (parseInt(userConfig.startDate.month) == parseInt(userConfig.endDate.month)) && (parseInt(userConfig.startDate.year) == parseInt(userConfig.endDate.year))) {
-                // Initiate captcha request
-                console.log('Starting recaptcha solution request...')
-                requestId = await initiateCaptchaRequest(config.apiKey, userConfig.downloadEmitidos == true ? 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/menu.jsf' : 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/recibidos/comprobantesRecibidos.jsf')
-            }
+
 
             // Wait before next search
             await sleep(1000)
         }
 
         if (userConfig.downloadRecibidos == true && userConfig.downloadEmitidos == false) {
+
             // Get recibos recibidos
             console.log('Getting `recibos recibidos...`')
 
             if (firstLoopFlag == 0) {
-
+                // Initiate captcha request
+                console.log('Starting recaptcha solution request...')
+                requestId = await initiateCaptchaRequest(config.apiKey, config.pageurl)
+                console.log(requestId)
                 // Go to reports page
                 // Click sidebar btn
                 console.log('Click menu btn...')
@@ -367,6 +381,8 @@ const downloadReports = async (driver, userConfig) => {
                 await driver.wait(until.titleContains('SISTEMA DE COMPROBANTES'), 15000)
                 await driver.wait(until.elementLocated(By.xpath('//*[@id="tituloPagina"]/div/span[1]')), 15000)
                 await sleep(2000)
+
+
             }
 
             firstLoopFlag = 1
@@ -382,6 +398,8 @@ const downloadReports = async (driver, userConfig) => {
             // Select year       
             let yearSelector = parseInt(userConfig.startDate.year) == moment().format('Y') ? 1 : moment().format('Y') - parseInt(userConfig.startDate.year) + 1
             await driver.findElement(By.xpath('//*[@id="frmPrincipal:ano"]/option[' + parseInt(yearSelector) + ']')).click()
+
+
 
             // Wait for Recaptcha solution
             console.log('Waiting for recaptcha solution...')
@@ -414,8 +432,9 @@ const downloadReports = async (driver, userConfig) => {
                             if (i == pages) {
                                 // Count total files in last page                            
                                 console.log('Executing download script no.' + k)
+                                await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + k + ':lnkXml"]'))
                                 await driver.executeScript(`mojarra.jsfcljs(document.getElementById('frmPrincipal'),{'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml':'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml'},'');return false`)
-
+                                await sleep(200)
                                 k++
                             } else {
                                 console.log('Executing download script no.' + k)
@@ -472,14 +491,9 @@ const downloadReports = async (driver, userConfig) => {
                 console.log('Failed to return to first page...')
             }
 
-
-            await driver.executeScript(`rcBuscar();`)
-            console.log('Reloading recaptcha...')
-            //await driver.findElement(By.xpath('//*[@id="btnRecaptcha"]')).click()
-
             // Initiate captcha request
             console.log('Starting recaptcha solution request...')
-            requestId = await initiateCaptchaRequest(config.apiKey, 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/recibidos/comprobantesRecibidos.jsf')
+            requestId = await initiateCaptchaRequest(config.apiKey, config.pageurl)
             console.log(requestId)
 
             // Wait before next search
@@ -652,8 +666,9 @@ const downloadMonthly = async (driver, userConfig) => {
                         if (i == pages) {
                             // Count total files in last page                            
                             console.log('Executing download script no.' + k)
+                            await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompRecibidos:' + k + ':lnkXml"]'))
                             await driver.executeScript(`mojarra.jsfcljs(document.getElementById('frmPrincipal'),{'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml':'frmPrincipal:tablaCompRecibidos:` + k + `:lnkXml'},'');return false`)
-
+                            await sleep(100)
                             k++
                         } else {
                             console.log('Executing download script no.' + k)
@@ -759,7 +774,7 @@ start = async () => {
     logging_prefs.setLevel(webdriver.logging.Type.PERFORMANCE, webdriver.logging.Level.ALL);
     options.setLoggingPrefs(logging_prefs);
 
-    // options.addArguments("--incognito")
+    options.addArguments("--incognito")
     // Needed for headless
     options.addArguments("--window-size=1920,1080")
     options.addArguments("--start-maximized")
