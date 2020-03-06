@@ -107,6 +107,9 @@ const downloadReports = async (driver, userConfig) => {
     while ((parseInt(userConfig.startDate.day) != parseInt(userConfig.endDate.day)) || (parseInt(userConfig.startDate.month) != parseInt(userConfig.endDate.month)) || (parseInt(userConfig.startDate.year) != parseInt(userConfig.endDate.year))) {
 
         if (userConfig.downloadEmitidos == true && userConfig.downloadRecibidos == false) {
+            // Initiate captcha request
+            console.log('Starting recaptcha solution request...')
+            let requestId = await initiateCaptchaRequest(config.apiKey, 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/menu.jsf')
             if (firstLoopFlag == 0) {
                 // Go to reports page
                 // Click sidebar btn
@@ -181,7 +184,7 @@ const downloadReports = async (driver, userConfig) => {
                 // Wait for page element to load
                 await driver.wait(until.elementLocated(By.xpath('//*[@id="tituloPagina"]/div/span[1]')), 15000)
 
-                await driver.executeScript(`rcBuscar();`)
+               
 
             }
 
@@ -205,11 +208,9 @@ const downloadReports = async (driver, userConfig) => {
             await driver.findElement(By.xpath('//*[@id="frmPrincipal:calendarFechaDesde_input"]')).sendKeys(date)
 
             // Select document type
-            await driver.findElement(By.xpath('//*[@id="frmPrincipal:cmbTipoComprobante"]/option[4]')).click()
+            await driver.findElement(By.xpath('//*[@id="frmPrincipal:cmbTipoComprobante"]/option[' + parseInt(userConfig.emitidosDocumentType) +']')).click()
 
-            // Initiate captcha request
-            console.log('Starting recaptcha solution request...')
-            let requestId = await initiateCaptchaRequest(config.apiKey, 'https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/consultas/menu.jsf')
+            
 
             // Wait for Recaptcha solution
             console.log('Waiting for recaptcha solution...')
@@ -306,8 +307,8 @@ const downloadReports = async (driver, userConfig) => {
                 console.log('Failed to return to first page...')
             }
 
-            await driver.executeScript(`rcBuscar();`)
-            console.log('Reloading recaptcha...')
+            // await driver.executeScript(`rcBuscar();`)
+            // console.log('Reloading recaptcha...')
 
 
 
