@@ -250,8 +250,9 @@ const downloadReports = async (driver, userConfig) => {
                             if (i == pages) {
                                 // Count total files in last page                            
                                 console.log('Executing download script no.' + k)
+                                await driver.findElement(By.xpath('//*[@id="frmPrincipal:tablaCompEmitidos:' + k + ':lnkXml"]'))
                                 await driver.executeScript(`mojarra.jsfcljs(document.getElementById('frmPrincipal'),{'frmPrincipal:tablaCompEmitidos:` + k + `:lnkXml':'frmPrincipal:tablaCompEmitidos:` + k + `:lnkXml'},'');return false`)
-
+                                await sleep(100)
                                 k++
                             } else {
                                 console.log('Executing download script no.' + k)

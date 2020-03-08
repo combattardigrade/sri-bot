@@ -4,19 +4,19 @@
         "password": "MOLSANDO17920"
     },
     "startDate": {
-        "day": "17",
+        "day": "27",
         "month": "12",
         "year": "2019"
     },
     "endDate": {
-        "day": "19",
-        "month": "2",
-        "year": "2020"
+        "day": "28",
+        "month": "12",
+        "year": "2019"
     },
     "downloadEmitidos": true,
     "downloadRecibidos": false,
     "tipoDescarga": "diario",
-    "emitidosDocumentType": "2",
+    "emitidosDocumentType": "6",
     "emptyDownloadsFolderOnStart": true,
     "emptyOutputFolderOnStart": true,
     "URL": "https://srienlinea.sri.gob.ec/sri-en-linea/inicio/NAT",
